@@ -114,7 +114,7 @@ public class CheckpointManager {
     private Sha256Hash readBinary(InputStream inputStream) throws IOException {
         DataInputStream dis = null;
         try {
-            MessageDigest digest = Sha256Hash.newDigest();
+            MessageDigest digest = Sha256Hash.newDigest(false);
             DigestInputStream digestInputStream = new DigestInputStream(inputStream, digest);
             dis = new DataInputStream(digestInputStream);
             digestInputStream.on(false);

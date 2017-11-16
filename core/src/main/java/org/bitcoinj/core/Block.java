@@ -89,10 +89,14 @@ public class Block extends Message {
     /** Block version introduced in BIP 65: OP_CHECKLOCKTIMEVERIFY */
     public static final long BLOCK_VERSION_BIP65 = 4;
 
+    public static final long VERSIONBITS_TOP_BITS_ARCHIVE_HASH = 0x01000000L;
+    public static final long VERSIONBITS_TOP_BITS_NEW_POW_HASH = 0x02000000L;
+
     // Fields defined as part of the protocol format.
     private long version;
     private Sha256Hash prevBlockHash;
     private Sha256Hash merkleRoot;
+    private ArchiveHash archive;
     private long time;
     private long difficultyTarget; // "nBits"
     private long nonce;
@@ -192,12 +196,13 @@ public class Block extends Message {
      * @param nonce Arbitrary number to make the block hash lower than the target.
      * @param transactions List of transactions including the coinbase.
      */
-    public Block(NetworkParameters params, long version, Sha256Hash prevBlockHash, Sha256Hash merkleRoot, long time,
+    public Block(NetworkParameters params, long version, Sha256Hash prevBlockHash, Sha256Hash merkleRoot, ArchiveHash archive, long time,
                  long difficultyTarget, long nonce, List<Transaction> transactions) {
         super(params);
         this.version = version;
         this.prevBlockHash = prevBlockHash;
         this.merkleRoot = merkleRoot;
+        this.archive = archive;
         this.time = time;
         this.difficultyTarget = difficultyTarget;
         this.nonce = nonce;
@@ -228,7 +233,7 @@ public class Block extends Message {
      */
     protected void parseTransactions(final int transactionsOffset) throws ProtocolException {
         cursor = transactionsOffset;
-        optimalEncodingMessageSize = HEADER_SIZE;
+        optimalEncodingMessageSize = cursor - offset;
         if (payload.length == cursor) {
             // This message is just a header, it has no transactions.
             transactionBytesValid = false;
@@ -256,14 +261,20 @@ public class Block extends Message {
         version = readUint32();
         prevBlockHash = readHash();
         merkleRoot = readHash();
+        if (hasArchive()) {
+            Sha256Hash archiveHeader = readHash();
+            Sha256Hash archiveMerkleRoot = readHash();
+            Sha256Hash archiveMerkleWitnessRoot = readHash();
+            archive = new ArchiveHash(archiveHeader, archiveMerkleRoot, archiveMerkleWitnessRoot);
+        }
         time = readUint32();
         difficultyTarget = readUint32();
         nonce = readUint32();
-        hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(payload, offset, cursor - offset));
+        hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(payload, offset, cursor - offset, isNewHash()));
         headerBytesValid = serializer.isParseRetainMode();
 
         // transactions
-        parseTransactions(offset + HEADER_SIZE);
+        parseTransactions(cursor);
         length = cursor - offset;
     }
     
@@ -277,14 +288,19 @@ public class Block extends Message {
     // default for testing
     void writeHeader(OutputStream stream) throws IOException {
         // try for cached write first
-        if (headerBytesValid && payload != null && payload.length >= offset + HEADER_SIZE) {
-            stream.write(payload, offset, HEADER_SIZE);
-            return;
-        }
+        //if (headerBytesValid && payload != null && payload.length >= offset + HEADER_SIZE) {
+        //    stream.write(payload, offset, HEADER_SIZE);
+        //    return;
+        //}
         // fall back to manual write
         Utils.uint32ToByteStreamLE(version, stream);
         stream.write(prevBlockHash.getReversedBytes());
         stream.write(getMerkleRoot().getReversedBytes());
+        if (hasArchive()) {
+            stream.write(archive.getHeader().getReversedBytes());
+            stream.write(archive.getMerkleRoot().getReversedBytes());
+            stream.write(archive.getMerkleWitnessRoot().getReversedBytes());
+        }
         Utils.uint32ToByteStreamLE(time, stream);
         Utils.uint32ToByteStreamLE(difficultyTarget, stream);
         Utils.uint32ToByteStreamLE(nonce, stream);
@@ -406,7 +422,7 @@ public class Block extends Message {
         try {
             ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(HEADER_SIZE);
             writeHeader(bos);
-            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray()));
+            return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray(), isNewHash()));
         } catch (IOException e) {
             throw new RuntimeException(e); // Cannot happen.
         }
@@ -463,6 +479,7 @@ public class Block extends Message {
         block.nonce = nonce;
         block.prevBlockHash = prevBlockHash;
         block.merkleRoot = getMerkleRoot();
+        block.archive = archive;
         block.version = version;
         block.time = time;
         block.difficultyTarget = difficultyTarget;
@@ -487,6 +504,12 @@ public class Block extends Message {
         s.append('\n');
         s.append("   previous block: ").append(getPrevBlockHash()).append("\n");
         s.append("   merkle root: ").append(getMerkleRoot()).append("\n");
+        if (hasArchive()) {
+            s.append("   archive: \n");
+            s.append("     header: ").append(archive.getHeader()).append("\n");
+            s.append("     merkle root: ").append(archive.getMerkleRoot()).append("\n");
+            s.append("     merkle witness root: ").append(archive.getMerkleWitnessRoot()).append("\n");
+        }
         s.append("   time: ").append(time).append(" (").append(Utils.dateTimeFormat(time * 1000)).append(")\n");
         s.append("   difficulty target (nBits): ").append(difficultyTarget).append("\n");
         s.append("   nonce: ").append(nonce).append("\n");
@@ -634,7 +657,7 @@ public class Block extends Message {
                 int right = Math.min(left + 1, levelSize - 1);
                 byte[] leftBytes = Utils.reverseBytes(tree.get(levelOffset + left));
                 byte[] rightBytes = Utils.reverseBytes(tree.get(levelOffset + right));
-                tree.add(Utils.reverseBytes(hashTwice(leftBytes, 0, 32, rightBytes, 0, 32)));
+                tree.add(Utils.reverseBytes(hashTwice(leftBytes, 0, 32, rightBytes, 0, 32, isNewHash())));
             }
             // Move to the next level.
             levelOffset += levelSize;
@@ -1031,4 +1054,7 @@ public class Block extends Message {
     public boolean isBIP65() {
         return version >= BLOCK_VERSION_BIP65;
     }
+
+    public boolean isNewHash() { return (version & VERSIONBITS_TOP_BITS_NEW_POW_HASH) != 0; }
+    public boolean hasArchive() { return (version & VERSIONBITS_TOP_BITS_ARCHIVE_HASH) != 0; }
 }
