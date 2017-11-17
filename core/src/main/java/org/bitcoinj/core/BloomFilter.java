@@ -312,7 +312,7 @@ public class BloomFilter extends Message {
                 matched.add(tx);
             }
         }
-        PartialMerkleTree pmt = PartialMerkleTree.buildFromLeaves(block.getParams(), bits, txHashes);
+        PartialMerkleTree pmt = PartialMerkleTree.buildFromLeaves(block.getParams(), bits, txHashes, block.isNewHash());
         FilteredBlock filteredBlock = new FilteredBlock(block.getParams(), block.cloneAsHeader(), pmt);
         for (Transaction transaction : matched)
             filteredBlock.provideTransaction(transaction);

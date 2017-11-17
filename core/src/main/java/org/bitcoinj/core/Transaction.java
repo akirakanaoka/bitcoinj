@@ -250,9 +250,13 @@ public class Transaction extends ChildMessage {
     @Override
     public Sha256Hash getHash() {
         if (hash == null) {
-            hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(unsafeBitcoinSerialize()));
+            hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(unsafeBitcoinSerialize(), false));
         }
         return hash;
+    }
+
+    public Sha256Hash getHash(boolean newHash) {
+        return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(unsafeBitcoinSerialize(), newHash));
     }
 
     /**
@@ -1104,7 +1108,7 @@ public class Transaction extends ChildMessage {
             uint32ToByteStreamLE(0x000000ff & sigHashType, bos);
             // Note that this is NOT reversed to ensure it will be signed correctly. If it were to be printed out
             // however then we would expect that it is IS reversed.
-            Sha256Hash hash = Sha256Hash.twiceOf(bos.toByteArray());
+            Sha256Hash hash = Sha256Hash.twiceOf(bos.toByteArray(), false);
             bos.close();
 
             return hash;

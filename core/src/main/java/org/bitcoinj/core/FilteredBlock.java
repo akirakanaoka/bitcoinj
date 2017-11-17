@@ -77,7 +77,7 @@ public class FilteredBlock extends Message {
         if (cachedTransactionHashes != null)
             return Collections.unmodifiableList(cachedTransactionHashes);
         List<Sha256Hash> hashesMatched = new LinkedList<>();
-        if (header.getMerkleRoot().equals(merkleTree.getTxnHashAndMerkleRoot(hashesMatched))) {
+        if (header.getMerkleRoot().equals(merkleTree.getTxnHashAndMerkleRoot(hashesMatched, header.isNewHash()))) {
             cachedTransactionHashes = hashesMatched;
             return Collections.unmodifiableList(cachedTransactionHashes);
         } else
