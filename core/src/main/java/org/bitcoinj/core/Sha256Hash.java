@@ -110,6 +110,9 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
     public static Sha256Hash of(byte[] contents, boolean newHash) {
         return wrap(hash(contents, newHash));
     }
+    public static Sha256Hash of(byte[] contents) {
+        return wrap(hash(contents, false));
+    }
 
     /** Use {@link #twiceOf(byte[])} instead: this old name is ambiguous. */
     @Deprecated
@@ -144,6 +147,7 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
             in.close();
         }
     }
+    public static Sha256Hash of(File file) throws IOException { return of(file, false); }
 
     /**
      * Returns a new SHA-256 MessageDigest instance.
@@ -201,6 +205,7 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
     public static byte[] hash(byte[] input, boolean newHash) {
         return hash(input, 0, input.length, newHash);
     }
+    public static byte[] hash(byte[] input) { return hash(input, false); }
 
     /**
      * Calculates the SHA-256 hash of the given byte range.
