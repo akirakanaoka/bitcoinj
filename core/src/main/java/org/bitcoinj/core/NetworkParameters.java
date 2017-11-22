@@ -88,6 +88,9 @@ public abstract class NetworkParameters {
     protected int majorityRejectBlockOutdated;
     protected int majorityWindow;
 
+    protected int newPoWHashStartHeight = -1;
+    protected ArchiveHashParameters[] archiveHashParameters = new ArchiveHashParameters[0];
+
     /**
      * See getId(). This may be null for old deserialized wallets. In that case we derive it heuristically
      * by looking at the port number.
@@ -471,6 +474,14 @@ public abstract class NetworkParameters {
      */
     public int getMajorityWindow() {
         return majorityWindow;
+    }
+
+    public int getNewPoWHashStartHeight() {
+        return newPoWHashStartHeight;
+    }
+
+    public ArchiveHashParameters[] getArchiveHashParameters() {
+        return archiveHashParameters;
     }
 
     /**

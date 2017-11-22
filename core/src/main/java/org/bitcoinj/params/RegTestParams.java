@@ -16,6 +16,7 @@
 
 package org.bitcoinj.params;
 
+import org.bitcoinj.core.ArchiveHashParameters;
 import org.bitcoinj.core.Block;
 
 import java.math.BigInteger;
@@ -41,6 +42,13 @@ public class RegTestParams extends TestNet2Params {
         majorityEnforceBlockUpgrade = MainNetParams.MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE;
         majorityRejectBlockOutdated = MainNetParams.MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED;
         majorityWindow = MainNetParams.MAINNET_MAJORITY_WINDOW;
+
+        newPoWHashStartHeight = 250;
+        ArchiveHashParameters archive = new ArchiveHashParameters();
+        archive.startHeight = 300;
+        archive.blocksPerHash = 10;
+        archive.nBlocks = 20;
+        archiveHashParameters = new ArchiveHashParameters[] { archive };
     }
 
     @Override

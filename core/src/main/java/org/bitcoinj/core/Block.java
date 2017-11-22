@@ -1057,4 +1057,8 @@ public class Block extends Message {
 
     public boolean isNewHash() { return (version & VERSIONBITS_TOP_BITS_NEW_POW_HASH) != 0; }
     public boolean hasArchive() { return (version & VERSIONBITS_TOP_BITS_ARCHIVE_HASH) != 0; }
+
+    public ArchiveHash getArchive() {
+        return archive;
+    }
 }
