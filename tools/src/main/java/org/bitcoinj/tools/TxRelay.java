@@ -15,6 +15,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.OnTransactionBroadcastListener;
+import org.bitcoinj.params.BSafeNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet2Params;
 import org.json.simple.JSONArray;
@@ -30,10 +31,12 @@ import java.util.UUID;
 public class TxRelay {
 
     private static NetworkParameters params;
+    private static NetworkParameters dstParams;
     private static PeerGroup mPeerGroup;
 
     public static void main(String[] args) throws Exception {
         params = MainNetParams.get();
+        dstParams = BSafeNetParams.get();
         mPeerGroup = new PeerGroup(params);
 
         mPeerGroup.addOnTransactionBroadcastListener(new OnTransactionBroadcastListener() {
@@ -74,9 +77,9 @@ public class TxRelay {
                 }
                 if (address != null) {
                     if (address.isP2SHAddress()) {
-                        address = new Address(TestNet2Params.get(), 196, address.getHash160());
+                        address = new Address(dstParams, dstParams.getP2SHHeader(), address.getHash160());
                     } else {
-                        address = new Address(TestNet2Params.get(), 111, address.getHash160());
+                        address = new Address(dstParams, dstParams.getAddressHeader(), address.getHash160());
                     }
                     amounts.put(address.toBase58(),
                             (double)output.getValue().getValue() / Coin.COIN.getValue());
