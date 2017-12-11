@@ -24,13 +24,14 @@ public class BSafeNetParams extends AbstractBitcoinNetParams {
         genesisBlock.setDifficultyTarget(0x1e01ffff);
         genesisBlock.setTime(1464966958);
         genesisBlock.setNonce(0);
-        id = "bsafenet";
+        id = ID_BSAFENET;
         subsidyDecreaseBlockCount = 210000;
         spendableCoinbaseDepth = 100;
         //String genesisHash = genesisBlock.getHashAsString();
         //checkState(genesisHash.equals("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"),
         //        genesisHash);
 
+        newPoWHashStartHeight = 120;
 
     }
 
@@ -44,6 +45,6 @@ public class BSafeNetParams extends AbstractBitcoinNetParams {
 
     @Override
     public String getPaymentProtocolId() {
-        return PAYMENT_PROTOCOL_ID_MAINNET;
+        return PAYMENT_PROTOCOL_ID_BSAFENET;
     }
 }

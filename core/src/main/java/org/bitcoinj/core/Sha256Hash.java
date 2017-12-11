@@ -162,6 +162,8 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
             if (!newHash) {
                 return MessageDigest.getInstance("SHA-256");
             } else {
+                return MessageDigest.getInstance("SHA-512");
+                /*
                 return new MessageDigest("SHA-512-truncate") {
                     private MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
                     @Override
@@ -190,6 +192,7 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
                         return 32;
                     }
                 };
+                */
             }
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);  // Can't happen.
@@ -244,7 +247,11 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
     public static byte[] hashTwice(byte[] input, int offset, int length, boolean newHash) {
         MessageDigest digest = newDigest(newHash);
         digest.update(input, offset, length);
-        return digest.digest(digest.digest());
+        if (newHash) {
+            return Arrays.copyOf(digest.digest(digest.digest()), 32);
+        } else {
+            return digest.digest(digest.digest());
+        }
     }
 
     /**
@@ -256,7 +263,11 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
         MessageDigest digest = newDigest(newHash);
         digest.update(input1, offset1, length1);
         digest.update(input2, offset2, length2);
-        return digest.digest(digest.digest());
+        if (newHash) {
+            return Arrays.copyOf(digest.digest(digest.digest()), 32);
+        } else {
+            return digest.digest(digest.digest());
+        }
     }
 
     @Override

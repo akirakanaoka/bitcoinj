@@ -128,7 +128,7 @@ public class StoredBlock {
         // Using unsafeBitcoinSerialize here can give us direct access to the same bytes we read off the wire,
         // avoiding serialization round-trips.
         byte[] bytes = getHeader().unsafeBitcoinSerialize();
-        buffer.put(bytes, 0, Block.HEADER_SIZE);  // Trim the trailing 00 byte (zero transactions).
+        buffer.put(bytes, 0, bytes.length - 1);  // Trim the trailing 00 byte (zero transactions).
     }
 
     /** De-serializes the stored block from a custom packed format. Used by {@link CheckpointManager}. */
@@ -138,8 +138,16 @@ public class StoredBlock {
         BigInteger chainWork = new BigInteger(1, chainWorkBytes);
         int height = buffer.getInt();  // +4 bytes
         byte[] header = new byte[Block.HEADER_SIZE + 1];    // Extra byte for the 00 transactions length.
-        buffer.get(header, 0, Block.HEADER_SIZE);
-        return new StoredBlock(params.getDefaultSerializer().makeBlock(header), chainWork, height);
+        try {
+            buffer.slice().get(header, 0, Block.HEADER_SIZE);
+            StoredBlock block = new StoredBlock(params.getDefaultSerializer().makeBlock(header), chainWork, height);
+            buffer.get(header, 0, Block.HEADER_SIZE);
+            return block;
+        } catch (Exception e) {
+            header = new byte[Block.HEADER_SIZE + 32 * 3 + 1];    // Extra byte for the 00 transactions length.
+            buffer.get(header, 0, Block.HEADER_SIZE + 32 * 3);
+            return new StoredBlock(params.getDefaultSerializer().makeBlock(header), chainWork, height);
+        }
     }
 
     @Override

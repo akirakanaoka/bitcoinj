@@ -20,6 +20,7 @@ package org.bitcoinj.tools;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.net.discovery.DnsDiscovery;
+import org.bitcoinj.params.BSafeNetParams;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.params.TestNet3Params;
@@ -276,6 +277,10 @@ public class WalletTool {
             case REGTEST:
                 params = RegTestParams.get();
                 chainFileName = new File("regtest.chain");
+                break;
+            case BSAFENET:
+                params = BSafeNetParams.get();
+                chainFileName = new File("bsafenet.chain");
                 break;
             default:
                 throw new RuntimeException("Unreachable.");
@@ -1212,7 +1217,12 @@ public class WalletTool {
             String[] peerAddrs = peersFlag.split(",");
             for (String peer : peerAddrs) {
                 try {
-                    peers.addAddress(new PeerAddress(params, InetAddress.getByName(peer)));
+                    String[] s = peer.split(":");
+                    if (s.length == 2) {
+                        peers.addAddress(new PeerAddress(params, InetAddress.getByName(s[0]), Integer.parseInt(s[1])));
+                    } else {
+                        peers.addAddress(new PeerAddress(params, InetAddress.getByName(peer)));
+                    }
                 } catch (UnknownHostException e) {
                     System.err.println("Could not understand peer domain name/IP address: " + peer + ": " + e.getMessage());
                     System.exit(1);
