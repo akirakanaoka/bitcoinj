@@ -755,6 +755,7 @@ public abstract class AbstractBlockChain {
                 StoredBlock b = storedPrev;
                 while (b.getHeight() != archiveEnd) b = b.getPrev(blockStore); // XXX: need random access
 
+                Sha256Hash last = b.getHeader().getHash();
                 StoredBlock[] blocks = new StoredBlock[p.blocksPerHash];
                 for (int i = p.blocksPerHash - 1; i >= 0; i--) {
                     blocks[i] = b;
@@ -766,6 +767,7 @@ public abstract class AbstractBlockChain {
                     for (int i = 0; i < p.blocksPerHash; i++) {
                         blocks[i].getHeader().writeHeader(bos);
                     }
+                    bos.write(last.getReversedBytes());
                     Sha256Hash hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray(), true));
                     if (!hash.equals(block.getArchive().getHeader())) {
                         throw new VerificationException("Block contains invalid archive hash");

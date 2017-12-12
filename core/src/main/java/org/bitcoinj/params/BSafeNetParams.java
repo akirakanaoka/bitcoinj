@@ -1,5 +1,6 @@
 package org.bitcoinj.params;
 
+import org.bitcoinj.core.ArchiveHashParameters;
 import org.bitcoinj.core.Utils;
 
 public class BSafeNetParams extends AbstractBitcoinNetParams {
@@ -33,6 +34,11 @@ public class BSafeNetParams extends AbstractBitcoinNetParams {
 
         newPoWHashStartHeight = 120;
 
+        archiveHashParameters = new ArchiveHashParameters[1];
+        archiveHashParameters[0] = new ArchiveHashParameters();
+        archiveHashParameters[0].startHeight = 140;
+        archiveHashParameters[0].blocksPerHash = 10;
+        archiveHashParameters[0].nBlocks = 5;
     }
 
     private static BSafeNetParams instance;
