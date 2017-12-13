@@ -61,11 +61,16 @@ public class FilteredBlock extends Message {
     protected void parse() throws ProtocolException {
         byte[] headerBytes = new byte[Block.HEADER_SIZE];
         System.arraycopy(payload, 0, headerBytes, 0, Block.HEADER_SIZE);
-        header = params.getDefaultSerializer().makeBlock(headerBytes);
+        try {
+            header = params.getDefaultSerializer().makeBlock(headerBytes);
+        } catch (Exception e) {
+            headerBytes = Arrays.copyOf(payload, Block.HEADER_SIZE + 3 * 32);
+            header = params.getDefaultSerializer().makeBlock(headerBytes);
+        }
+
+        merkleTree = new PartialMerkleTree(params, payload, header.getMessageSize());
         
-        merkleTree = new PartialMerkleTree(params, payload, Block.HEADER_SIZE);
-        
-        length = Block.HEADER_SIZE + merkleTree.getMessageSize();
+        length = header.getMessageSize() + merkleTree.getMessageSize();
     }
     
     /**
@@ -77,7 +82,7 @@ public class FilteredBlock extends Message {
         if (cachedTransactionHashes != null)
             return Collections.unmodifiableList(cachedTransactionHashes);
         List<Sha256Hash> hashesMatched = new LinkedList<>();
-        if (header.getMerkleRoot().equals(merkleTree.getTxnHashAndMerkleRoot(hashesMatched))) {
+        if (header.getMerkleRoot().equals(merkleTree.getTxnHashAndMerkleRoot(hashesMatched, header.isNewHash()))) {
             cachedTransactionHashes = hashesMatched;
             return Collections.unmodifiableList(cachedTransactionHashes);
         } else

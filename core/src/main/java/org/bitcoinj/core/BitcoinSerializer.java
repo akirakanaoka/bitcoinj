@@ -101,7 +101,7 @@ public class BitcoinSerializer extends MessageSerializer {
 
         Utils.uint32ToByteArrayLE(message.length, header, 4 + COMMAND_LEN);
 
-        byte[] hash = Sha256Hash.hashTwice(message);
+        byte[] hash = Sha256Hash.hashTwice(message, false);
         System.arraycopy(hash, 0, header, 4 + COMMAND_LEN + 4, 4);
         out.write(header);
         out.write(message);
@@ -167,7 +167,7 @@ public class BitcoinSerializer extends MessageSerializer {
 
         // Verify the checksum.
         byte[] hash;
-        hash = Sha256Hash.hashTwice(payloadBytes);
+        hash = Sha256Hash.hashTwice(payloadBytes, false);
         if (header.checksum[0] != hash[0] || header.checksum[1] != hash[1] ||
                 header.checksum[2] != hash[2] || header.checksum[3] != hash[3]) {
             throw new ProtocolException("Checksum failed to verify, actual " +

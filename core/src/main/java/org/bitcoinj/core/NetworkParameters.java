@@ -59,6 +59,7 @@ public abstract class NetworkParameters {
     public static final String ID_REGTEST = "org.bitcoin.regtest";
     /** Unit test network. */
     public static final String ID_UNITTESTNET = "org.bitcoinj.unittest";
+    public static final String ID_BSAFENET = "network.bsafe";
 
     /** The string used by the payment protocol to represent the main net. */
     public static final String PAYMENT_PROTOCOL_ID_MAINNET = "main";
@@ -67,6 +68,7 @@ public abstract class NetworkParameters {
     /** The string used by the payment protocol to represent unit testing (note that this is non-standard). */
     public static final String PAYMENT_PROTOCOL_ID_UNIT_TESTS = "unittest";
     public static final String PAYMENT_PROTOCOL_ID_REGTEST = "regtest";
+    public static final String PAYMENT_PROTOCOL_ID_BSAFENET = "bsafenet";
 
     // TODO: Seed nodes should be here as well.
 
@@ -87,6 +89,9 @@ public abstract class NetworkParameters {
     protected int majorityEnforceBlockUpgrade;
     protected int majorityRejectBlockOutdated;
     protected int majorityWindow;
+
+    protected int newPoWHashStartHeight = -1;
+    protected ArchiveHashParameters[] archiveHashParameters = new ArchiveHashParameters[0];
 
     /**
      * See getId(). This may be null for old deserialized wallets. In that case we derive it heuristically
@@ -224,6 +229,8 @@ public abstract class NetworkParameters {
             return UnitTestParams.get();
         } else if (id.equals(ID_REGTEST)) {
             return RegTestParams.get();
+        } else if (id.equals(ID_BSAFENET)) {
+            return BSafeNetParams.get();
         } else {
             return null;
         }
@@ -240,6 +247,8 @@ public abstract class NetworkParameters {
             return UnitTestParams.get();
         } else if (pmtProtocolId.equals(PAYMENT_PROTOCOL_ID_REGTEST)) {
             return RegTestParams.get();
+        } else if (pmtProtocolId.equals(PAYMENT_PROTOCOL_ID_BSAFENET)) {
+            return BSafeNetParams.get();
         } else {
             return null;
         }
@@ -471,6 +480,14 @@ public abstract class NetworkParameters {
      */
     public int getMajorityWindow() {
         return majorityWindow;
+    }
+
+    public int getNewPoWHashStartHeight() {
+        return newPoWHashStartHeight;
+    }
+
+    public ArchiveHashParameters[] getArchiveHashParameters() {
+        return archiveHashParameters;
     }
 
     /**

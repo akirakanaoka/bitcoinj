@@ -28,6 +28,8 @@ import org.bitcoinj.wallet.Wallet;
 import org.slf4j.*;
 
 import javax.annotation.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.*;
@@ -556,6 +558,17 @@ public abstract class AbstractBlockChain {
                 }
             }
 
+            if (params.newPoWHashStartHeight >= 0 && storedPrev.getHeight() + 1 >= params.newPoWHashStartHeight) {
+                if (!block.isNewHash()) {
+                    throw new VerificationException("Block must be hashed with new hash");
+                }
+            } else {
+                if (block.isNewHash()) {
+                    throw new VerificationException("Block must not be hashed with new hash");
+                }
+            }
+            verifyArchiveHash(block, storedPrev);
+
             // This block connects to the best known block, it is a normal continuation of the system.
             TransactionOutputChanges txOutChanges = null;
             if (shouldVerifyTransactions())
@@ -725,6 +738,45 @@ public abstract class AbstractBlockChain {
         
         Arrays.sort(timestamps, unused+1, 11);
         return timestamps[unused + (11-unused)/2];
+    }
+
+
+    private void verifyArchiveHash(Block block, StoredBlock storedPrev) throws BlockStoreException {
+        int height = storedPrev.getHeight() + 1;
+        for (ArchiveHashParameters p : params.getArchiveHashParameters()) {
+            int endHeight = p.startHeight + p.nBlocks;
+            if (p.startHeight <= height && height < endHeight) {
+                if (!block.hasArchive()) {
+                    throw new VerificationException("Block without archive hash");
+                }
+                int index = height - p.startHeight;
+                int archiveEnd = (index + 1) * p.blocksPerHash - 1;
+
+                StoredBlock b = storedPrev;
+                while (b.getHeight() != archiveEnd) b = b.getPrev(blockStore); // XXX: need random access
+
+                Sha256Hash last = b.getHeader().getHash();
+                StoredBlock[] blocks = new StoredBlock[p.blocksPerHash];
+                for (int i = p.blocksPerHash - 1; i >= 0; i--) {
+                    blocks[i] = b;
+                    b = b.getPrev(blockStore);
+                }
+
+                try {
+                    ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream();
+                    for (int i = 0; i < p.blocksPerHash; i++) {
+                        blocks[i].getHeader().writeHeader(bos);
+                    }
+                    bos.write(last.getReversedBytes());
+                    Sha256Hash hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bos.toByteArray(), true));
+                    if (!hash.equals(block.getArchive().getHeader())) {
+                        throw new VerificationException("Block contains invalid archive hash");
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e); // Cannot happen.
+                }
+            }
+        }
     }
     
     /**

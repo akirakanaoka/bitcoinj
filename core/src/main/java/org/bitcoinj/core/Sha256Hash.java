@@ -97,8 +97,8 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
 
     /** Use {@link #of(byte[])} instead: this old name is ambiguous. */
     @Deprecated
-    public static Sha256Hash create(byte[] contents) {
-        return of(contents);
+    public static Sha256Hash create(byte[] contents, boolean newHash) {
+        return of(contents, newHash);
     }
 
     /**
@@ -107,14 +107,17 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
      * @param contents the bytes on which the hash value is calculated
      * @return a new instance containing the calculated (one-time) hash
      */
+    public static Sha256Hash of(byte[] contents, boolean newHash) {
+        return wrap(hash(contents, newHash));
+    }
     public static Sha256Hash of(byte[] contents) {
-        return wrap(hash(contents));
+        return wrap(hash(contents, false));
     }
 
     /** Use {@link #twiceOf(byte[])} instead: this old name is ambiguous. */
     @Deprecated
-    public static Sha256Hash createDouble(byte[] contents) {
-        return twiceOf(contents);
+    public static Sha256Hash createDouble(byte[] contents, boolean newHash) {
+        return twiceOf(contents, newHash);
     }
 
     /**
@@ -123,8 +126,8 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
      * @param contents the bytes on which the hash value is calculated
      * @return a new instance containing the calculated (two-time) hash
      */
-    public static Sha256Hash twiceOf(byte[] contents) {
-        return wrap(hashTwice(contents));
+    public static Sha256Hash twiceOf(byte[] contents, boolean newHash) {
+        return wrap(hashTwice(contents, newHash));
     }
 
     /**
@@ -136,14 +139,15 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
      * @return a new instance containing the calculated (one-time) hash
      * @throws IOException if an error occurs while reading the file
      */
-    public static Sha256Hash of(File file) throws IOException {
+    public static Sha256Hash of(File file, boolean newHash) throws IOException {
         FileInputStream in = new FileInputStream(file);
         try {
-            return of(ByteStreams.toByteArray(in));
+            return of(ByteStreams.toByteArray(in), newHash);
         } finally {
             in.close();
         }
     }
+    public static Sha256Hash of(File file) throws IOException { return of(file, false); }
 
     /**
      * Returns a new SHA-256 MessageDigest instance.
@@ -153,9 +157,43 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
      *
      * @return a new SHA-256 MessageDigest instance
      */
-    public static MessageDigest newDigest() {
+    public static MessageDigest newDigest(boolean newHash) {
         try {
-            return MessageDigest.getInstance("SHA-256");
+            if (!newHash) {
+                return MessageDigest.getInstance("SHA-256");
+            } else {
+                return MessageDigest.getInstance("SHA-512");
+                /*
+                return new MessageDigest("SHA-512-truncate") {
+                    private MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
+                    @Override
+                    protected void engineUpdate(byte b) {
+                        sha512.update(b);
+                    }
+
+                    @Override
+                    protected void engineUpdate(byte[] bytes, int offset, int len) {
+                        sha512.update(bytes, offset, len);
+                    }
+
+                    @Override
+                    protected byte[] engineDigest() {
+                        byte[] digest = sha512.digest();
+                        return Arrays.copyOf(digest, 32);
+                    }
+
+                    @Override
+                    protected void engineReset() {
+                        sha512.reset();
+                    }
+
+                    @Override
+                    public int engineGetDigestLength() {
+                        return 32;
+                    }
+                };
+                */
+            }
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);  // Can't happen.
         }
@@ -167,9 +205,10 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
      * @param input the bytes to hash
      * @return the hash (in big-endian order)
      */
-    public static byte[] hash(byte[] input) {
-        return hash(input, 0, input.length);
+    public static byte[] hash(byte[] input, boolean newHash) {
+        return hash(input, 0, input.length, newHash);
     }
+    public static byte[] hash(byte[] input) { return hash(input, false); }
 
     /**
      * Calculates the SHA-256 hash of the given byte range.
@@ -179,8 +218,8 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
      * @param length the number of bytes to hash
      * @return the hash (in big-endian order)
      */
-    public static byte[] hash(byte[] input, int offset, int length) {
-        MessageDigest digest = newDigest();
+    public static byte[] hash(byte[] input, int offset, int length, boolean newHash) {
+        MessageDigest digest = newDigest(newHash);
         digest.update(input, offset, length);
         return digest.digest();
     }
@@ -192,8 +231,8 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
      * @param input the bytes to hash
      * @return the double-hash (in big-endian order)
      */
-    public static byte[] hashTwice(byte[] input) {
-        return hashTwice(input, 0, input.length);
+    public static byte[] hashTwice(byte[] input, boolean newHash) {
+        return hashTwice(input, 0, input.length, newHash);
     }
 
     /**
@@ -205,10 +244,14 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
      * @param length the number of bytes to hash
      * @return the double-hash (in big-endian order)
      */
-    public static byte[] hashTwice(byte[] input, int offset, int length) {
-        MessageDigest digest = newDigest();
+    public static byte[] hashTwice(byte[] input, int offset, int length, boolean newHash) {
+        MessageDigest digest = newDigest(newHash);
         digest.update(input, offset, length);
-        return digest.digest(digest.digest());
+        if (newHash) {
+            return Arrays.copyOf(digest.digest(digest.digest()), 32);
+        } else {
+            return digest.digest(digest.digest());
+        }
     }
 
     /**
@@ -216,11 +259,15 @@ public class Sha256Hash implements Serializable, Comparable<Sha256Hash> {
      * concatenating the two ranges and then passing the result to {@link #hashTwice(byte[])}.
      */
     public static byte[] hashTwice(byte[] input1, int offset1, int length1,
-                                   byte[] input2, int offset2, int length2) {
-        MessageDigest digest = newDigest();
+                                   byte[] input2, int offset2, int length2, boolean newHash) {
+        MessageDigest digest = newDigest(newHash);
         digest.update(input1, offset1, length1);
         digest.update(input2, offset2, length2);
-        return digest.digest(digest.digest());
+        if (newHash) {
+            return Arrays.copyOf(digest.digest(digest.digest()), 32);
+        } else {
+            return digest.digest(digest.digest());
+        }
     }
 
     @Override
